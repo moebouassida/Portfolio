@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moez Bouassida · AI Engineer</title>
+<meta name="description" content="AI engineer working on computer vision, medical imaging and vision-language models, from research to production.">
+<meta property="og:title" content="Moez Bouassida · AI Engineer"><meta property="og:description" content="Computer vision, medical imaging and vision-language models.">
+<meta property="og:image" content="/og.png"><meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0f1c'/><text x='16' y='22' font-family='Arial' font-weight='700' font-size='17' text-anchor='middle' fill='%237dd3c8'>MB</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<style>
+/* Layout concept: a radiology reading room. Dark viewer panes with DICOM-style corner overlays; the hero is a
+   live "inference" grid you can point at; each project is a case you can interact with. Single dark theme by design. */
+:root{
+  --ink:#070b14; --pane:#0c1220; --pane-2:#111a2c; --rule:rgba(148,170,210,.14);
+  --fg:#e6ecf7; --dim:#8796b0; --scan:#5eead4; --amber:#fbbf24; --violet:#b4a7ff;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--ink);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--scan);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.025em;text-wrap:balance;margin:0}
+.mono{font-family:var(--mono)}
+.tag{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--scan)}
+
+/* nav */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:40;background:var(--ink)}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:color-mix(in srgb,var(--ink) 80%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--rule)}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:13px}
+.brand{font-family:var(--display);font-weight:700;font-size:18px;text-decoration:none;white-space:nowrap}
+.brand i{font-style:normal;color:var(--scan)}
+nav ul{display:flex;gap:22px;margin:0;padding:0;list-style:none;font-size:14px;color:var(--dim)}
+nav ul a{text-decoration:none} nav ul a:hover{color:var(--fg)}
+@media (max-width:620px){nav ul{gap:14px} nav ul .x{display:none}}
+@media (max-width:420px){nav ul .y{display:none}}
+
+/* hero */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--rule);min-height:560px}
+#grid{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:pan-y}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,var(--ink) 0%,color-mix(in srgb,var(--ink) 94%,transparent) 48%,color-mix(in srgb,var(--ink) 25%,transparent) 64%,transparent 76%)}
+.hero .wrap{position:relative;z-index:2;padding-block:104px 96px;pointer-events:none}
+.hero .wrap *{pointer-events:auto}
+.hero h1{font-size:clamp(40px,6.2vw,74px);line-height:1.02;font-weight:700;max-width:12.5ch}
+.hero h1 .hl{color:var(--scan)}
+.lede{color:var(--dim);font-size:clamp(17px,1.9vw,19px);max-width:46ch;margin:24px 0 0}
+.lede b{color:var(--fg);font-weight:500}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:1px solid var(--rule);border-radius:8px;background:var(--pane);
+  font-size:14.5px;font-weight:500;text-decoration:none;color:var(--fg);cursor:pointer;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--scan)}
+.btn.on{background:var(--scan);color:var(--ink);border-color:var(--scan)}
+.btn svg{width:15px;height:15px}
+.hud{position:absolute;z-index:2;font-family:var(--mono);font-size:11px;line-height:1.55;color:var(--dim);pointer-events:none;letter-spacing:.04em}
+.hud b{color:var(--fg);font-weight:500}
+.hud{background:color-mix(in srgb,var(--ink) 82%,transparent);padding:6px 9px;border:1px solid var(--rule);border-radius:6px}
+.hud.tr{top:18px;right:max(20px,env(safe-area-inset-right,0px));text-align:right}
+.hud.br{bottom:16px;right:max(20px,env(safe-area-inset-right,0px));text-align:right}
+.hint{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:26px}
+.hint span{color:var(--scan)}
+@media (max-width:760px){
+  .hero{min-height:0} .hero::after{background:linear-gradient(180deg,color-mix(in srgb,var(--ink) 55%,transparent),var(--ink) 75%)}
+  .hud.tr{display:none} .hint{display:none} .hero .wrap{padding-block:72px 64px}
+}
+
+/* stats rail */
+.rail{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--rule)}
+.rail div{padding:22px 20px;border-right:1px solid var(--rule)} .rail div:last-child{border-right:0}
+.rail b{display:block;font-family:var(--mono);font-weight:500;font-size:clamp(20px,2.4vw,26px);font-variant-numeric:tabular-nums}
+.rail span{font-size:13px;color:var(--dim)}
+@media (max-width:760px){.rail{grid-template-columns:repeat(2,minmax(0,1fr))} .rail div:nth-child(2){border-right:0} .rail div:nth-child(-n+2){border-bottom:1px solid var(--rule)}}
+
+section{padding-block:96px}
+.shead{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:40px}
+.shead h2{font-size:clamp(32px,4.4vw,48px);margin-top:10px}
+.shead p{margin:0;color:var(--dim);max-width:46ch}
+
+/* cases */
+.cases{display:grid;gap:28px}
+.case{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--pane)}
+.case.flip{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+.case.flip .view{order:2}
+@media (max-width:900px){.case,.case.flip{grid-template-columns:1fr} .case.flip .view{order:0}}
+.view{position:relative;background:#000;min-height:340px;overflow:hidden;user-select:none}
+.view img{display:block;width:100%;height:100%;object-fit:cover}
+.ov{position:absolute;font-family:var(--mono);font-size:11px;line-height:1.5;color:#c8d3e6;text-shadow:0 1px 2px #000;pointer-events:none;z-index:3;letter-spacing:.03em}
+.ov.tl{top:12px;left:14px} .ov.tr{top:12px;right:14px;text-align:right} .ov.bl{bottom:12px;left:14px} .ov.br{bottom:12px;right:14px;text-align:right}
+.ov b{color:#fff;font-weight:500}
+.info{padding:30px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.info h3{font-size:28px;line-height:1.1}
+.info p{margin:0;color:var(--dim);font-size:15.5px}
+.read{display:flex;flex-wrap:wrap;gap:10px 26px;padding-block:14px;border-block:1px dashed var(--rule);font-family:var(--mono);font-variant-numeric:tabular-nums}
+.read div{display:flex;flex-direction:column}
+.read b{font-size:24px;font-weight:500;line-height:1.15}
+.read span{font-size:11px;color:var(--dim);letter-spacing:.04em}
+.stack{display:flex;flex-wrap:wrap;gap:6px}
+.stack span{font-family:var(--mono);font-size:11.5px;padding:3px 8px;border:1px solid var(--rule);border-radius:5px;color:var(--dim)}
+.go{display:flex;gap:18px;flex-wrap:wrap;margin-top:auto;font-size:14.5px;font-weight:500}
+.go a{color:var(--scan);text-decoration:none} .go a:hover{text-decoration:underline}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+
+/* compare slider */
+.cmp{position:relative;height:100%;min-height:340px;aspect-ratio:1/1;max-width:100%;margin:0 auto;cursor:ew-resize;touch-action:pan-y}
+.cmp img{position:absolute;inset:0}
+.cmp .top{clip-path:inset(0 0 0 var(--x,50%))}
+.cmp .bar{position:absolute;top:0;bottom:0;left:var(--x,50%);width:2px;background:var(--scan);z-index:2;box-shadow:0 0 12px var(--scan)}
+.cmp .bar::after{content:"⟷";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;
+  background:var(--scan);color:var(--ink);display:grid;place-items:center;font-size:16px;font-weight:700}
+.cmp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0;z-index:4}
+.view.dark{display:flex;align-items:center;justify-content:center}
+
+/* magnifier */
+.mag{position:relative;cursor:zoom-in;height:100%}
+.lens{position:absolute;width:170px;height:170px;border-radius:50%;border:2px solid var(--scan);box-shadow:0 0 0 4px rgba(0,0,0,.35),0 10px 30px rgba(0,0,0,.5);
+  pointer-events:none;background-repeat:no-repeat;z-index:4;opacity:0;transition:opacity .15s}
+.mag:hover .lens,.mag.touch .lens{opacity:1}
+
+/* param bar for the VQA case */
+.vqa{padding:34px;display:flex;flex-direction:column;justify-content:center;gap:22px;background:
+  radial-gradient(600px 300px at 80% 0%,rgba(180,167,255,.14),transparent 60%),var(--pane-2)}
+.pbar{height:30px;border-radius:6px;background:repeating-linear-gradient(90deg,#1f2a44 0 6px,#18223a 6px 7px);position:relative;overflow:hidden}
+.pbar i{position:absolute;inset:0 auto 0 0;width:.9%;background:var(--violet);box-shadow:0 0 14px var(--violet);min-width:4px}
+.plabel{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.flow div{border:1px solid var(--rule);border-radius:8px;padding:10px;font-size:13px;background:var(--pane)}
+.flow b{display:block;font-family:var(--mono);font-size:10.5px;color:var(--violet);letter-spacing:.08em;font-weight:500}
+@media (max-width:520px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.qa{font-family:var(--mono);font-size:13px;border-left:2px solid var(--violet);padding-left:12px;color:var(--dim)}
+.qa b{color:var(--fg);font-weight:500}
+
+/* experience */
+.exp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:14px;overflow:hidden}
+@media (max-width:900px){.exp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.exp{grid-template-columns:1fr}}
+.job{background:var(--pane);padding:24px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.job .when{font-family:var(--mono);font-size:12px;color:var(--scan);font-variant-numeric:tabular-nums}
+.job h3{font-size:19px;line-height:1.2}
+.job .org{font-size:14px;color:var(--fg)}
+.job p{margin:0;color:var(--dim);font-size:14.5px}
+
+/* toolkit */
+.kit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+@media (max-width:860px){.kit{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.kit{grid-template-columns:1fr}}
+.kit h3{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--scan);font-weight:500}
+.kit p{margin:8px 0 0;font-size:15px}
+.edu{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:40px;align-items:center;margin-top:52px;padding-top:30px;border-top:1px solid var(--rule)}
+@media (max-width:760px){.edu{grid-template-columns:1fr} .award{justify-self:start}}
+.edu h3{font-size:16px}
+.edu-l{display:grid;gap:26px}
+.award{margin:0;max-width:440px;justify-self:end;display:flex;flex-direction:column;gap:12px}
+.award img{width:100%;max-width:100%;aspect-ratio:1/1;object-fit:cover;object-position:50% 20%;border-radius:12px;border:1px solid var(--rule);filter:saturate(.9)}.edu p{margin:4px 0 0;color:var(--dim);font-size:14.5px}
+
+/* contact */
+.contact{background:var(--pane);border-top:1px solid var(--rule)}
+.contact h2{font-size:clamp(34px,5.4vw,60px);max-width:15ch}
+.mailrow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:26px}
+.mail{font-family:var(--mono);font-size:clamp(16px,2.4vw,21px);user-select:all;overflow-wrap:anywhere}
+.note{font-size:12.5px;color:var(--dim);margin-top:40px}
+footer{border-top:1px solid var(--rule);padding-block:26px;font-size:13px;color:var(--dim)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<nav aria-label="Main"><div class="wrap">
+  <a class="brand" href="#top">Moez Bouassida<i>.</i></a>
+  <ul><li><a href="#work">Work</a></li><li class="y"><a href="#experience">Experience</a></li><li class="x"><a href="#toolkit">Toolkit</a></li><li><a href="#contact">Contact</a></li></ul>
+</div></nav>
+
+<header class="hero" id="top">
+  <canvas id="grid" aria-label="Interactive grid of synthetic medical image tiles with a detection box that follows your pointer" role="img"></canvas>
+  <div class="hud tr" id="hudTop">INFERENCE · LIVE<br><b id="hMod">—</b><br><span id="hConf">—</span></div>
+  <div class="hud br">SYNTHETIC TILES · NO PATIENT DATA</div>
+  <div class="wrap">
+    <h1>Computer vision, <span class="hl">medical imaging</span> &amp; vision-language models.</h1>
+    <p class="lede">I build AI that works outside the notebook: <b>models running in 5+ clinics</b>, <b>production GenAI at a bank</b>,
+      and research on how much we can trust a model's output.</p>
+    <div class="cta">
+      <a class="btn on" href="Moez_Bouassida_CV.pdf" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 14h6M9 18h6"/></svg>CV</a>
+      <a class="btn" href="https://github.com/moebouassida" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn" href="https://www.linkedin.com/in/moezbouassida/" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn" href="https://huggingface.co/moebouassida" target="_blank" rel="noopener">Hugging Face</a>
+    </div>
+    <div class="hint"><span>⌖</span> Point at the images. The detector follows you.</div>
+  </div>
+</header>
+
+<div class="rail">
+  <div><b>5+</b><span>clinical sites in production</span></div>
+  <div><b>0.896</b><span>Dice · BraTS 2021</span></div>
+  <div><b>0.666</b><span>C-index · 1,030 patients</span></div>
+  <div><b>1 wk → 1 h</b><span>regulatory reporting at UIB</span></div>
+</div>
+
+<main>
+<section id="work"><div class="wrap">
+  <div class="shead"><div><div class="tag">Selected work</div><h2>Cases</h2></div>
+    <p>Each project is end-to-end, from training to a working interface. Try them: drag, hover, switch views.</p></div>
+
+  <div class="cases">
+    <!-- Radiology -->
+    <article class="case">
+      <div class="view dark">
+        <div class="cmp" id="cmp" style="--x:50%">
+          <img id="radA" src="img/rad_s1.jpg" alt="Chest X-ray from a public dataset">
+          <img id="radB" class="top" src="img/rad_h1.jpg" alt="Same X-ray with a Grad-CAM heatmap showing the regions behind the model's finding">
+          <div class="bar"></div>
+          <input type="range" id="cmpR" min="0" max="100" value="50" aria-label="Reveal the Grad-CAM heatmap">
+        </div>
+        <div class="ov tl"><b>CHEST X-RAY</b><br>PA · public dataset</div>
+        <div class="ov tr">Grad-CAM<br>TorchXRayVision</div>
+        <div class="ov bl">◂ original</div><div class="ov br">heatmap ▸</div>
+      </div>
+      <div class="info">
+        <div class="tag">Agentic AI · Radiology</div>
+        <h3>Multi-agent radiology reporting</h3>
+        <p>Four LangGraph agents analyse the X-ray, pull clinical context and prior reports, draft a structured report
+          and check it for missing sections and unsupported findings. A radiologist approves every report before it is final.</p>
+        <div class="read"><div><b>0.91</b><span>QA validation score</span></div><div><b>4</b><span>agents + human review</span></div></div>
+        <div class="controls"><button class="btn on" data-study="1" type="button">Study 1</button><button class="btn" data-study="2" type="button">Study 2</button></div>
+        <div class="stack"><span>LangGraph</span><span>Claude</span><span>Qdrant RAG</span><span>MCP</span><span>FastAPI</span><span>AWS ECS</span></div>
+        <div class="go"><a href="https://github.com/moebouassida/Multiagent-Radiology-Report" target="_blank" rel="noopener">Code &amp; demo →</a></div>
+      </div>
+    </article>
+
+    <!-- SwinUNETR -->
+    <article class="case flip">
+      <div class="view">
+        <img id="swinImg" src="img/swin_3d.jpg" alt="3D render of a brain MRI with the predicted tumour regions">
+        <div class="ov tl"><b>BRAIN MRI</b><br>FLAIR · T1 · T1ce · T2</div>
+        <div class="ov tr" id="swinTag">3D VOLUME</div>
+        <div class="ov bl">BraTS 2021 · public</div>
+      </div>
+      <div class="info">
+        <div class="tag">3D segmentation · MRI</div>
+        <h3>Brain tumour segmentation</h3>
+        <p>SwinUNETR v2 on four MRI sequences, with uncertainty maps, a 3D viewer, agents that write the clinical report,
+          federated learning and AWS deployment through Terraform.</p>
+        <div class="read"><div><b>0.8961</b><span>mean Dice · 188 test cases</span></div><div><b>5.62 mm</b><span>HD95</span></div></div>
+        <div class="controls"><button class="btn on" data-swin="swin_3d" data-label="3D VOLUME" type="button">3D volume</button>
+          <button class="btn" data-swin="swin_mpr" data-label="AXIAL · CORONAL · SAGITTAL" type="button">Slices</button>
+          <button class="btn" data-swin="swin_mpr2" data-label="SLICES · CASE 2" type="button">Case 2</button></div>
+        <div class="stack"><span>PyTorch</span><span>MONAI</span><span>LangGraph</span><span>WebGL</span><span>Flower</span><span>Terraform</span></div>
+        <div class="go"><a href="https://github.com/moebouassida/SwinUNETR-3D-Brain-Segmentation" target="_blank" rel="noopener">Code &amp; demo →</a></div>
+      </div>
+    </article>
+
+    <!-- OmicPath -->
+    <article class="case">
+      <div class="view" style="background:#fff">
+        <div class="mag" id="mag"><img id="magImg" src="img/omic_heatmap.jpg" alt="Whole-slide image of breast tissue with an attention heatmap over the regions that drove the prediction" style="object-fit:contain;background:#fff"><div class="lens" id="lens"></div></div>
+        <div class="ov tl" style="color:#0c1220;text-shadow:none"><b style="color:#0c1220">H&amp;E WHOLE SLIDE · ATTENTION</b><br>TCGA-BRCA · public · hover to magnify</div>
+      </div>
+      <div class="info">
+        <div class="tag">Multimodal · Survival analysis</div>
+        <h3>OmicPath</h3>
+        <p>Fuses gigapixel pathology slides with gene-expression pathway scores to predict 5-year survival, molecular
+          subtype and TP53 status. The attention map shows which tissue regions drove each prediction.</p>
+        <div class="read"><div><b>0.666</b><span>C-index · 5-fold CV</span></div><div><b>0.818</b><span>TP53 AUROC</span></div><div><b>1,030</b><span>patients</span></div></div>
+        <div class="stack"><span>UNI2-h</span><span>Attention MIL</span><span>Cox model</span><span>OpenSlide</span><span>FastAPI</span></div>
+        <div class="go"><a href="https://github.com/moebouassida/OmicPath" target="_blank" rel="noopener">Code →</a></div>
+      </div>
+    </article>
+
+    <!-- MedGemma -->
+    <article class="case flip">
+      <div class="view vqa">
+        <div class="ov tl">MEDGEMMA 4B · DoRA</div>
+        <div>
+          <div class="plabel"><span>trainable parameters</span><span><b style="color:var(--violet)">0.9%</b> of 4B</span></div>
+          <div class="pbar" style="margin-top:8px"><i></i></div>
+        </div>
+        <div class="flow">
+          <div><b>IMAGE</b>SigLIP encoder</div><div><b>QUESTION</b>Clinical prompt</div><div><b>ADAPTER</b>DoRA r=16</div><div><b>ANSWER</b>Yes/no or free text</div>
+        </div>
+        <div class="qa">Example question · <b>"Is there evidence of necrosis in this tissue?"</b><br>A: yes / no, plus a short explanation</div>
+      </div>
+      <div class="info">
+        <div class="tag">Vision-language · Fine-tuning</div>
+        <h3>MedGemma for pathology questions</h3>
+        <p>Fine-tuned Google's medical vision-language model to answer questions about pathology images, trained on an
+          H100 with W&amp;B tracking, served with FastAPI and a Gradio demo.</p>
+        <div class="read"><div><b>32.6K</b><span>question-answer pairs</span></div><div><b>1 epoch</b><span>on an H100</span></div></div>
+        <div class="stack"><span>Hugging Face</span><span>PEFT</span><span>bfloat16</span><span>W&amp;B</span><span>Gradio</span></div>
+        <div class="go"><a href="https://github.com/moebouassida/Path-VQA-Med-GaMMa-Fine-Tuning" target="_blank" rel="noopener">Code →</a>
+          <a href="https://huggingface.co/moebouassida/medgemma-4b-path-vqa" target="_blank" rel="noopener">Model →</a></div>
+      </div>
+    </article>
+  </div>
+</div></section>
+
+<section id="experience" style="padding-top:0"><div class="wrap">
+  <div class="shead"><div><div class="tag">Experience</div><h2>Where I've worked</h2></div></div>
+  <div class="exp">
+    <div class="job"><div class="when">May 2025 – now</div><h3>Data Scientist (AI Engineering)</h3><div class="org">UIB · Société Générale Group</div>
+      <p>On-premise GenAI in production: a RAG assistant over Central Bank regulations and an agentic text-to-SQL system. Basel III and CRR3 reporting cut from a week to under an hour.</p></div>
+    <div class="job"><div class="when">2026 – now</div><h3>Technical Co-Founder</h3><div class="org">WayCivil · USA, remote</div>
+      <p>Vision-language models and OCR that read civil plan sets, check them against engineering rules and return a marked-up PDF.</p></div>
+    <div class="job"><div class="when">2026 – now</div><h3>Founder</h3><div class="org">Fovea AI</div>
+      <p>Ophthalmology AI for the MENA region: a retinal imaging platform and a self-supervised retinal foundation model.</p></div>
+    <div class="job"><div class="when">Sep 2024 – May 2025</div><h3>Computer Vision Engineer</h3><div class="org">OPTOSCOPIA</div>
+      <p>Led detection and segmentation models for automated semen analysis on microscopy images, deployed across 5+ clinical sites.</p></div>
+    <div class="job"><div class="when">Mar – Aug 2024</div><h3>AI Research Intern, Digital Pathology</h3><div class="org">WSK Medical · Amsterdam</div>
+      <p>Tumour-stroma ratio scoring on colorectal slides: semi-supervised CNN and ViT models, foundation model transfer, and a desktop slide viewer with AI inference.</p></div>
+    <div class="job"><div class="when">Apr – Jun 2025</div><h3>AI Engineer, Freelance</h3><div class="org">Faits Mains</div>
+      <p>A multimodal RAG chatbot and a serverless image generation API on AWS.</p></div>
+  </div>
+</div></section>
+
+<section id="toolkit" style="padding-top:0"><div class="wrap">
+  <div class="shead"><div><div class="tag">Toolkit</div><h2>What I work with</h2></div></div>
+  <div class="kit">
+    <div><h3>Vision</h3><p>Detection, segmentation, 3D medical imaging, whole-slide images, foundation models, self- and semi-supervised learning</p></div>
+    <div><h3>Language &amp; agents</h3><p>LLMs, vision-language models, RAG, LangGraph agents, MCP, LoRA and DoRA fine-tuning, evaluation</p></div>
+    <div><h3>Production</h3><p>FastAPI, Docker, AWS, Terraform, CI/CD, ONNX, TensorRT, Prometheus, W&amp;B, MLflow</p></div>
+    <div><h3>Frameworks</h3><p>PyTorch, MONAI, Hugging Face, timm, OpenCV, scikit-learn</p></div>
+    <div><h3>Data</h3><p>Python, SQL, Pandas, Oracle, Alteryx, survival analysis</p></div>
+    <div><h3>Research</h3><p>Literature review, experiment design, cross-validation, uncertainty estimation, explainability</p></div>
+  </div>
+  <div class="edu">
+    <div class="edu-l"><div><h3>ENSI, Tunisia</h3><p>Engineering degree in Computer Science (master's level), 2021 – 2024</p></div>
+    <div><h3>Certifications</h3><p>Project Management · Agile and Scrum</p></div>
+    <div><h3>Languages</h3><p>Arabic and French (native), English (C1), German (A2)</p></div></div>
+    <figure class="award"><img src="img/award.jpg" alt="Moez (second from left) with his teammates holding the first-place board of the ENSI PCD Challenge, June 2023" loading="lazy">
+      <figcaption><h3>1st place, ENSI PCD Challenge</h3><p>June 2023 · image-based fashion recommendation with deep visual similarity</p></figcaption></figure>
+  </div>
+</div></section>
+</main>
+
+<section class="contact" id="contact"><div class="wrap">
+  <div class="tag">Contact</div>
+  <h2 style="margin-top:12px">Have a hard imaging problem? Let's talk.</h2>
+  <div class="mailrow"><span class="mail" id="mail">moe.bouassida@gmail.com</span><button class="btn" id="copy" type="button">Copy email</button></div>
+  <p class="note">Images on this site come from public research datasets (BraTS 2021, TCGA, public chest X-rays) or are generated. The hero tiles are synthetic.</p>
+</div></section>
+<footer><div class="wrap"><span>© 2026 Moez Bouassida</span><span>Tunis</span></div></footer>
+
+<script>
+// ---------- copy email
+document.getElementById('copy').addEventListener('click', e => {
+  const b = e.currentTarget, el = document.getElementById('mail');
+  const sel = () => getSelection().selectAllChildren(el);
+  try { navigator.clipboard.writeText(el.textContent).then(() => { b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy email', 1500); }, sel); } catch (_) { sel(); }
+});
+
+// ---------- hero: synthetic tile grid + detector that follows the pointer
+(() => {
+  const cv = document.getElementById('grid'), g = cv.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MODS = [['H&E TISSUE','tumour region'],['BRAIN MRI','lesion'],['FUNDUS','optic disc'],['CHEST X-RAY','lung field'],['MICROSCOPY','sperm cell']];
+  const sprite = new Image(); sprite.src = 'tiles.jpg';
+  let W, H, dpr, tiles = [], box = null, target = null, last = 0, pointer = false, tourAt = 0;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  function layout(){
+    dpr = Math.min(devicePixelRatio || 1, 2); W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const T = W < 760 ? 54 : 76, gap = W < 760 ? 6 : 9, x0 = W < 760 ? 0 : W * 0.53;
+    tiles = []; seed = 7;
+    for (let y = 10, r = 0; y < H; y += T + gap, r++) for (let x = x0 + (r % 2) * (T / 3), c = 0; x < W; x += T + gap, c++) {
+      const f = W < 760 ? .7 : (x - x0) / (W - x0);
+      if (rnd() > .3 + .7 * f) continue;
+      const m = Math.floor(rnd() * 5), v = Math.floor(rnd() * 6);
+      tiles.push({x, y, T, m, v, a: .35 + .65 * f, conf: (.82 + rnd() * .17).toFixed(2)});
+    }
+  }
+  function draw(t){
+    g.clearRect(0, 0, W, H);
+    for (const k of tiles) {
+      g.globalAlpha = k.a;
+      g.save(); g.beginPath(); g.roundRect(k.x, k.y, k.T, k.T, 6); g.clip();
+      if (sprite.complete) g.drawImage(sprite, k.v * 160, k.m * 160, 160, 160, k.x, k.y, k.T, k.T);
+      g.restore();
+    }
+    g.globalAlpha = 1;
+    if (!target && tiles.length) target = tiles[Math.floor(tiles.length * .6)];
+    if (!pointer && !still && t - tourAt > 1700) {               // idle: tour bright tiles
+      const pool = tiles.filter(k => k.a > .7); target = pool[Math.floor(Math.random() * pool.length)] || target; tourAt = t;
+    }
+    if (target) {
+      const p = 6;
+      const want = {x: target.x - p, y: target.y - p, w: target.T + 2 * p, h: target.T + 2 * p};
+      box = box || {...want};
+      const k = still ? 1 : .18;
+      for (const key in want) box[key] += (want[key] - box[key]) * k;
+      g.strokeStyle = '#5eead4'; g.lineWidth = 1.6; g.shadowColor = 'rgba(94,234,212,.6)'; g.shadowBlur = 12;
+      g.strokeRect(box.x, box.y, box.w, box.h); g.shadowBlur = 0;
+      const L = 9; g.lineWidth = 3;                              // corner ticks
+      [[box.x, box.y, 1, 1], [box.x + box.w, box.y, -1, 1], [box.x, box.y + box.h, 1, -1], [box.x + box.w, box.y + box.h, -1, -1]].forEach(([x, y, sx, sy]) => {
+        g.beginPath(); g.moveTo(x + sx * L, y); g.lineTo(x, y); g.lineTo(x, y + sy * L); g.stroke(); });
+      const txt = `${MODS[target.m][1]} ${target.conf}`;
+      g.font = '600 11px "IBM Plex Mono", monospace';
+      const w = g.measureText(txt).width + 12;
+      g.fillStyle = '#5eead4'; g.beginPath(); g.roundRect(box.x - .8, box.y - 20, w, 17, 3); g.fill();
+      g.fillStyle = '#070b14'; g.fillText(txt, box.x + 5, box.y - 7.5);
+      if (target !== last) { last = target;
+        document.getElementById('hMod').textContent = MODS[target.m][0];
+        document.getElementById('hConf').textContent = `${MODS[target.m][1]} · conf ${target.conf}`; }
+    }
+    if (!still) requestAnimationFrame(draw);
+  }
+  cv.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    let best = null, bd = 1e9;
+    for (const k of tiles) { const d = (k.x + k.T / 2 - x) ** 2 + (k.y + k.T / 2 - y) ** 2; if (d < bd) { bd = d; best = k; } }
+    if (best && bd < 120 * 120) { target = best; pointer = true; if (still) draw(0); }
+  });
+  cv.addEventListener('pointerleave', () => { pointer = false; });
+  sprite.onload = () => { if (still) draw(0); };
+  layout(); addEventListener('resize', () => { layout(); target = null; box = null; if (still) draw(0); });
+  requestAnimationFrame(draw);
+})();
+
+// ---------- radiology: before/after slider + study switch
+(() => {
+  const cmp = document.getElementById('cmp'), r = document.getElementById('cmpR');
+  const set = v => cmp.style.setProperty('--x', v + '%');
+  r.addEventListener('input', () => set(r.value));
+  document.querySelectorAll('[data-study]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('[data-study]').forEach(x => x.classList.toggle('on', x === b));
+    const n = b.dataset.study;
+    document.getElementById('radA').src = `img/rad_s${n}.jpg`; document.getElementById('radB').src = `img/rad_h${n}.jpg`;
+  }));
+})();
+
+// ---------- brain MRI: switch views
+document.querySelectorAll('[data-swin]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-swin]').forEach(x => x.classList.toggle('on', x === b));
+  const img = document.getElementById('swinImg'); img.src = `img/${b.dataset.swin}.jpg`;
+  img.style.objectFit = b.dataset.swin === 'swin_3d' ? 'cover' : 'contain';
+  document.getElementById('swinTag').textContent = b.dataset.label;
+}));
+
+// ---------- OmicPath: magnifier lens
+(() => {
+  const mag = document.getElementById('mag'), img = document.getElementById('magImg'), lens = document.getElementById('lens'), Z = 2.6;
+  function move(e){
+    const r = img.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    // the image is letterboxed (object-fit: contain): find the drawn area
+    const ir = img.naturalWidth / img.naturalHeight, br = r.width / r.height;
+    const dw = ir > br ? r.width : r.height * ir, dh = ir > br ? r.width / ir : r.height;
+    const ox = (r.width - dw) / 2, oy = (r.height - dh) / 2;
+    lens.style.left = (x - 85) + 'px'; lens.style.top = (y - 85) + 'px';
+    lens.style.backgroundImage = `url(${img.src})`;
+    lens.style.backgroundSize = `${dw * Z}px ${dh * Z}px`;
+    lens.style.backgroundPosition = `${-((x - ox) * Z - 85)}px ${-((y - oy) * Z - 85)}px`;
+  }
+  mag.addEventListener('pointermove', move);
+  mag.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') { mag.classList.add('touch'); move(e); } });
+  mag.addEventListener('pointerup', () => mag.classList.remove('touch'));
+})();
+</script>
+
+</body></html>
